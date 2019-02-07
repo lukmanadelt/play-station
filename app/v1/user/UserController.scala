@@ -34,15 +34,15 @@ class UserController @Inject()(cc: UserControllerComponents)(implicit ec: Execut
     userResourceHandler.getUsers.map { users =>
       if (users.isEmpty) {
         Ok(Json.prettyPrint(Json.obj(
-          "success" -> true,
-          "users" -> users
+          "success" -> false,
+          "users" -> users,
+          "message" -> "Users not found"
         )))
       }
 
       Ok(Json.prettyPrint(Json.obj(
         "success" -> true,
-        "users" -> users,
-        "message" -> "Users not found"
+        "users" -> users
       )))
     }
   }
