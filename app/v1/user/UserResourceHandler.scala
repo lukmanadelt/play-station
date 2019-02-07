@@ -1,5 +1,7 @@
 package v1.user
 
+import java.security.MessageDigest
+
 import javax.inject.{Inject, Provider}
 import play.api.MarkerContext
 import play.api.libs.json._
@@ -27,12 +29,19 @@ object UserResource {
 class UserResourceHandler @Inject()(routerProvider: Provider[UserRouter], userRepository: UserRepository)
                                    (implicit ec: ExecutionContext) {
 
-  def create(userInput: UserFormInput)(implicit mc: MarkerContext): Future[UserResource] = {
+  def getUsers(implicit mc: MarkerContext): Future[Iterable[UserResource]] = {
+    userRepository.get().map { userDataList =>
+      userDataList.map(userData => createUserResource(userData))
+    }
+  }
+
+  def createUser(userInput: UserFormInput)(implicit mc: MarkerContext): Future[UserResource] = {
+    val userPassword = new String(md5(userInput.user_password))
     val data = UserData(
       1,
       userInput.user_full_name,
       userInput.user_email,
-      userInput.user_password,
+      userPassword,
       userInput.user_address,
       userInput.user_phone
     )
@@ -44,20 +53,8 @@ class UserResourceHandler @Inject()(routerProvider: Provider[UserRouter], userRe
     }
   }
 
-  def lookup(id: Int): Future[Option[UserResource]] = {
-    val userFuture = userRepository.get(id)
-
-    userFuture.map { maybeUserData =>
-      maybeUserData.map { userData =>
-        createUserResource(userData)
-      }
-    }
-  }
-
-  def find(implicit mc: MarkerContext): Future[Iterable[UserResource]] = {
-    userRepository.list().map { userDataList =>
-      userDataList.map(userData => createUserResource(userData))
-    }
+  private def md5(password: String) = {
+    MessageDigest.getInstance("MD5").digest(password.getBytes).map("%02X".format(_)).mkString
   }
 
   private def createUserResource(p: UserData): UserResource = {
@@ -69,16 +66,5 @@ class UserResourceHandler @Inject()(routerProvider: Provider[UserRouter], userRe
       p.user_address,
       p.user_phone
     )
-  }
-
-  def update(id: Int, userInput: UserFormInput): Future[UserResource] = {
-    val data = UserData(id, userInput.user_full_name, userInput.user_email, userInput.user_password,
-      userInput.user_address, userInput.user_phone)
-
-    userRepository.update(data).map { id =>
-      createUserResource(data)
-      UserResource(data.id.toString, data.user_full_name, data.user_email, data.user_password, data.user_address,
-        data.user_phone)
-    }
   }
 }

@@ -29,52 +29,44 @@ class UserController @Inject()(cc: UserControllerComponents)(implicit ec: Execut
     )(UserFormInput.apply)(UserFormInput.unapply)
   )
 
-  def index: Action[AnyContent] = UserAction.async { implicit request =>
+  def getUsers: Action[AnyContent] = UserAction.async { implicit request =>
     logger.trace("index: ")
-    userResourceHandler.find.map { users =>
-      Ok(Json.toJson(users))
+    userResourceHandler.getUsers.map { users =>
+      if (users.isEmpty) {
+        Ok(Json.prettyPrint(Json.obj(
+          "success" -> true,
+          "users" -> users
+        )))
+      }
+
+      Ok(Json.prettyPrint(Json.obj(
+        "success" -> true,
+        "users" -> users,
+        "message" -> "Users not found"
+      )))
     }
   }
 
-  def create: Action[AnyContent] = UserAction.async { implicit request =>
+  def createUser: Action[AnyContent] = UserAction.async { implicit request =>
     logger.trace("create: ")
     createJsonPost()
   }
 
-  def show(id: Int): Action[AnyContent] = UserAction.async { implicit request =>
-    logger.trace(s"show: id = $id")
-    userResourceHandler.lookup(id).map { user =>
-      Ok(Json.toJson(user))
-    }
-  }
-
-  def update(id: Int): Action[AnyContent] = UserAction.async { implicit request =>
-    logger.trace(s"update: id = $id")
-    updateJsonPost(id)
-  }
-
   private def createJsonPost[A]()(implicit request: UserRequest[A]): Future[Result] = {
     def failure(badForm: Form[UserFormInput]) = {
-      Future.successful(BadRequest(badForm.errorsAsJson))
+      Future.successful(BadRequest(Json.prettyPrint(Json.obj(
+        "success" -> false,
+        "message" -> badForm.errorsAsJson
+      ))))
     }
 
     def success(input: UserFormInput) = {
-      userResourceHandler.create(input).map { user =>
-        Created(Json.toJson(user)).withHeaders(LOCATION -> user.user_full_name)
-      }
-    }
-
-    form.bindFromRequest().fold(failure, success)
-  }
-
-  private def updateJsonPost[A](id: Int)(implicit request: UserRequest[A]): Future[Result] = {
-    def failure(badForm: Form[UserFormInput]) = {
-      Future.successful(BadRequest(badForm.errorsAsJson))
-    }
-
-    def success(input: UserFormInput) = {
-      userResourceHandler.update(id, input).map { user =>
-        Created(Json.toJson(user)).withHeaders(LOCATION -> user.user_full_name)
+      userResourceHandler.createUser(input).map { user =>
+        Created(Json.prettyPrint(Json.obj(
+          "success" -> true,
+          "users" -> user,
+          "message" -> "User registration success"
+        )))
       }
     }
 

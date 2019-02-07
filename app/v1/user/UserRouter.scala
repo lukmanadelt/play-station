@@ -16,15 +16,9 @@ class UserRouter @Inject()(controller: UserController) extends SimpleRouter {
 
   override def routes: Routes = {
     case GET(p"/") =>
-      controller.index
+      controller.getUsers
 
     case POST(p"/") =>
-      controller.create
-
-    case GET(p"/${int(id)}") =>
-      controller.show(id)
-
-    case POST(p"/${int(id)}") =>
-      controller.update(id)
+      controller.createUser
   }
 }
